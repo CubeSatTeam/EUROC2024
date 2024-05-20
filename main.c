@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <stdlib.h>
+#include "MPU6050.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,7 +43,7 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-I2C_HandleTypeDef hi2c2;
+I2C_HandleTypeDef hi2c1;
 
 UART_HandleTypeDef huart2;
 
@@ -53,13 +54,6 @@ const osThreadAttr_t defaultTask_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
-/* Definitions for LedBlink */
-osThreadId_t LedBlinkHandle;
-const osThreadAttr_t LedBlink_attributes = {
-  .name = "LedBlink",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityLow,
-};
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -67,10 +61,9 @@ const osThreadAttr_t LedBlink_attributes = {
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_I2C2_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_I2C1_Init(void);
 void StartDefaultTask(void *argument);
-void LedBlinkFunc(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -98,6 +91,7 @@ PUTCHAR_PROTOTYPE
   */
 int main(void)
 {
+
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -120,10 +114,11 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_I2C2_Init();
   MX_USART2_UART_Init();
-  /* USER CODE BEGIN 2 */
+  MX_I2C1_Init();
 
+  /* USER CODE BEGIN 2 */
+mpu6050_Setting();
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -149,9 +144,6 @@ int main(void)
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
-  /* creation of LedBlink */
-  LedBlinkHandle = osThreadNew(LedBlinkFunc, NULL, &LedBlink_attributes);
-
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -164,6 +156,7 @@ int main(void)
   osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -195,7 +188,12 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = 16;
+  RCC_OscInitStruct.PLL.PLLN = 336;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV4;
+  RCC_OscInitStruct.PLL.PLLQ = 7;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -205,48 +203,48 @@ void SystemClock_Config(void)
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     Error_Handler();
   }
 }
 
 /**
-  * @brief I2C2 Initialization Function
+  * @brief I2C1 Initialization Function
   * @param None
   * @retval None
   */
-static void MX_I2C2_Init(void)
+static void MX_I2C1_Init(void)
 {
 
-  /* USER CODE BEGIN I2C2_Init 0 */
+  /* USER CODE BEGIN I2C1_Init 0 */
 
-  /* USER CODE END I2C2_Init 0 */
+  /* USER CODE END I2C1_Init 0 */
 
-  /* USER CODE BEGIN I2C2_Init 1 */
+  /* USER CODE BEGIN I2C1_Init 1 */
 
-  /* USER CODE END I2C2_Init 1 */
-  hi2c2.Instance = I2C2;
-  hi2c2.Init.ClockSpeed = 100000;
-  hi2c2.Init.DutyCycle = I2C_DUTYCYCLE_2;
-  hi2c2.Init.OwnAddress1 = 0;
-  hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-  hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-  hi2c2.Init.OwnAddress2 = 0;
-  hi2c2.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-  hi2c2.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-  if (HAL_I2C_Init(&hi2c2) != HAL_OK)
+  /* USER CODE END I2C1_Init 1 */
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.ClockSpeed = 100000;
+  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN I2C2_Init 2 */
+  /* USER CODE BEGIN I2C1_Init 2 */
 
-  /* USER CODE END I2C2_Init 2 */
+  /* USER CODE END I2C1_Init 2 */
 
 }
 
@@ -295,18 +293,26 @@ static void MX_GPIO_Init(void)
 /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, LD2_Pin|GPIO_PIN_8, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : PB4 PB5 */
-  GPIO_InitStruct.Pin = GPIO_PIN_4|GPIO_PIN_5;
+  /*Configure GPIO pin : B1_Pin */
+  GPIO_InitStruct.Pin = B1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : LD2_Pin PA8 */
+  GPIO_InitStruct.Pin = LD2_Pin|GPIO_PIN_8;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
@@ -335,7 +341,7 @@ void StartDefaultTask(void *argument)
 
 	  /* Check if device is ready to communicate */
 	  int ret;
-	  while((ret = HAL_I2C_IsDeviceReady(&hi2c2, (DevAddress << 1), 10, HAL_MAX_DELAY)) != HAL_OK)
+	  while((ret = HAL_I2C_IsDeviceReady(&hi2c1, (DevAddress << 1), 10, HAL_MAX_DELAY)) != HAL_OK)
 			  {
 		  	  	  switch(ret)
 				  {
@@ -355,68 +361,29 @@ void StartDefaultTask(void *argument)
 
 	  /* Set power management register 1 to 0 to enable temperature readings */
 	  uint8_t PWR_MGMT_1 = 0x0;
-	  if((HAL_I2C_Mem_Write(&hi2c2, (DevAddress << 1), 107, 1, &PWR_MGMT_1, 1, 100) != HAL_OK)) {printf("Error writing\r\n"); exit(1);};
+	  if((HAL_I2C_Mem_Write(&hi2c1, (DevAddress << 1), 107, 1, &PWR_MGMT_1, 1, 100) != HAL_OK)) {printf("Error writing\r\n"); exit(1);};
 
 
 	  uint8_t TEMP_LOW;
 	  uint8_t TEMP_HIGH;
 
 	  /* Read both temperature sensor registers */
-	  if((HAL_I2C_Mem_Read(&hi2c2, (DevAddress << 1), tempRegAddress1, 1, &TEMP_HIGH, 1, 100) != HAL_OK)) {printf("Error reading\r\n"); exit(1);};
-	  if((HAL_I2C_Mem_Read(&hi2c2, (DevAddress << 1), tempRegAddress2, 1, &TEMP_LOW, 1, 100) != HAL_OK)) {printf("Error reading\r\n"); exit(1);};
+	  if((HAL_I2C_Mem_Read(&hi2c1, (DevAddress << 1), tempRegAddress1, 1, &TEMP_HIGH, 1, 100) != HAL_OK)) {printf("Error reading\r\n"); exit(1);};
+	  if((HAL_I2C_Mem_Read(&hi2c1, (DevAddress << 1), tempRegAddress2, 1, &TEMP_LOW, 1, 100) != HAL_OK)) {printf("Error reading\r\n"); exit(1);};
 
 	  /* data[1] contains the 8 most significant bits and data[0] the 8 least significant bits*/
 	  /* The value retrieved is a signed integer */
 	  int16_t tempValue = (TEMP_HIGH << 8) | TEMP_LOW;
-
-	  printf("Temperature value = %d\r\n", tempValue);
-	  HAL_Delay(1000);
-
+	  tempValue = ((tempValue /= 340.00) + 36.53)*100;
+	  printf("Temperature value = %d.%d °C\r\n", (tempValue / 100), (tempValue % 100));
 	  printf("-------------- \r\n");
+	  mpu6050_read();
+	  printf("-------------- \r\n");
+
+	  HAL_Delay(500);
+
   }
   /* USER CODE END 5 */
-}
-
-/* USER CODE BEGIN Header_LedBlinkFunc */
-/**
-* @brief Function implementing the LedBlink thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_LedBlinkFunc */
-void LedBlinkFunc(void *argument)
-{
-  /* USER CODE BEGIN LedBlinkFunc */
-  /* Infinite loop */
-  for(;;)
-  {
-	  	HAL_Delay(500);
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_SET);
-		HAL_Delay(500);
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_RESET);
-  }
-  /* USER CODE END LedBlinkFunc */
-}
-
-/**
-  * @brief  Period elapsed callback in non blocking mode
-  * @note   This function is called  when TIM4 interrupt took place, inside
-  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
-  * a global variable "uwTick" used as application time base.
-  * @param  htim : TIM handle
-  * @retval None
-  */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-  /* USER CODE BEGIN Callback 0 */
-
-  /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM4) {
-    HAL_IncTick();
-  }
-  /* USER CODE BEGIN Callback 1 */
-
-  /* USER CODE END Callback 1 */
 }
 
 /**

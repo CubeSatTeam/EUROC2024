@@ -7,7 +7,8 @@
 
 #ifndef INC_MPU6050_C_
 #define INC_MPU6050_C_
-void mpu6050();
+void mpu6050_read();
+void mpu6050_Setting();
 #define DEVICE_ADRESS 0x68
 
 #define FS_GYRO_250 0

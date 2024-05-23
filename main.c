@@ -25,6 +25,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "MPU6050.h"
+#include "temperatureread.h"
+#include "stm32f4xx_hal.h"
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,17 +48,21 @@
 /* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c1;
 
+UART_HandleTypeDef huart2;
+
 osThreadId Idle_ModeHandle;
 osThreadId Operation_modeHandle;
 osThreadId Emergency_ModeHandle;
 /* USER CODE BEGIN PV */
-
+	uint8_t tx_buffer[27]="waiting for command\n\r";
+	uint8_t buffer[10];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
+static void MX_USART2_UART_Init(void);
 void start_Idle_Mode(void const * argument);
 void start_Operation_mode(void const * argument);
 void start_Emergency_Mode(void const * argument);
@@ -70,8 +77,10 @@ void start_Emergency_Mode(void const * argument);
 
 PUTCHAR_PROTOTYPE
 {
-	//HAL_UART_Transmit( &huart2, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
-	//return ch;
+  /* e.g. write a character to the USART1 and Loop until the end of transmission */
+  HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, 0xFFFF);
+
+  return ch;
 }
 /* USER CODE END PFP */
 
@@ -88,6 +97,9 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
+	vTaskSuspend(Operation_modeHandle);
+	vTaskSuspend(Emergency_ModeHandle);
+
 
   /* USER CODE END 1 */
 
@@ -110,9 +122,11 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_I2C1_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-mpu6050_Setting();
-MPU_Setting();
+  mpu6050_Setting();
+  MPU_Setting();
+
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -245,6 +259,39 @@ static void MX_I2C1_Init(void)
 }
 
 /**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+
+  /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -257,10 +304,21 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOH_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : PA5 */
+  GPIO_InitStruct.Pin = GPIO_PIN_5;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PB4 PB5 */
   GPIO_InitStruct.Pin = GPIO_PIN_4|GPIO_PIN_5;
@@ -290,7 +348,16 @@ void start_Idle_Mode(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-	  while(1);
+	HAL_UART_Transmit_IT(&huart2,tx_buffer, 27);
+	uint8_t input=HAL_UART_Receive_IT(&huart2, buffer, 10);
+	if (input == 1){
+		vTaskResume(Operation_modeHandle);
+		vTaskResume(Emergency_ModeHandle);
+		printf("system initiated\n\r");
+		HAL_Delay(500);
+	}
+	memset(buffer, 0, 10);
+
 
 
   }
@@ -312,7 +379,7 @@ void start_Operation_mode(void const * argument)
   {
 	  mpu6050_read();
 	  printf("-------------- \r\n");
-	  HAL_Delay(500);
+	  HAL_Delay(250);
   }
   /* USER CODE END start_Operation_mode */
 }
@@ -334,11 +401,13 @@ void start_Emergency_Mode(void const * argument)
 	  printf("-------------- \r\n");
 	  if (tempValue > 26){
 		  vTaskSuspend(Operation_modeHandle);
-		 printf("operation mode have been suspended");
+		 printf("operation mode have been suspended\n\r");
+		 HAL_Delay(500);
 	  }
 	  else{
 		  vTaskResume(Operation_modeHandle);
-		  printf("operation mode have been resumed");
+		  printf("operation mode have been resumed\n\r");
+		  HAL_Delay(500);
 	  }
   }
   /* USER CODE END start_Emergency_Mode */

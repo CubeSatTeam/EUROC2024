@@ -1,5 +1,6 @@
 #include<MPU6050.h>
 #include<main.h>
+#include"stdio.h"
 extern I2C_HandleTypeDef hi2c1;
 void mpu6050_Setting(){
 	/*all the if function below is just to debug, technically only the function is needed*/
@@ -26,7 +27,7 @@ void mpu6050_Setting(){
 	  	  printf("F*CK\n");
 	    }
 	  /*this part is to configure the sensor data register of the sensor, in specific the full scale range of the acc, the same function can technically do all kind of config as stated in the registor map, all detail related is in the register map document (https://invensense.tdk.com/wp-content/uploads/2015/02/MPU-6000-Register-Map1.pdf)*/
-	  uint8_t temp_data=FS_ACC_4G;
+	  temp_data=FS_ACC_4G;
 	  ret=HAL_I2C_Mem_Write(&hi2c1,(DEVICE_ADRESS <<1) + 0, REG_CONFIG_ACC,1, &temp_data,1, 100);/*(I2C_HandleTypeDef *hi2c, uint16_t DevAddress, uint16_t MemAddress, uint16_t MemAddSize, uint8_t *pData, uint16_t Size, uint32_t Timeout);*/
 	  if (ret==HAL_OK){
 		  printf("writting register to 28(configuring acc)\n");
@@ -35,7 +36,7 @@ void mpu6050_Setting(){
 		  printf("F*CK\n");
 		}
 	  /*im too lazy to copy paste but its the same as above and its to escape sleep mode lol*/
-	  uint8_t temp_data=0;
+	  temp_data=0;
 	  ret=HAL_I2C_Mem_Write(&hi2c1,(DEVICE_ADRESS <<1) + 0,REG_USER_CTRL,1, &temp_data,1, 100);/*(I2C_HandleTypeDef *hi2c, uint16_t DevAddress, uint16_t MemAddress, uint16_t MemAddSize, uint8_t *pData, uint16_t Size, uint32_t Timeout);*/
 	  if (ret==HAL_OK){
 		  printf("writting register to 107(escape sleep mode)\n");
@@ -48,38 +49,38 @@ void mpu6050_read(){
 	/*im too lazy to copy paste but its the same as above and its to read data lol*/
     uint8_t ACC_DATA_XCORD_HIGH;
 	uint8_t ACC_DATA_XCORD_LOW;
-	if((HAL_I2C_Mem_Write(&hi2c, (DEVICE_ADRESS <<1) + 0,REGACC_DATA_XCORD_HIGH, 1,&ACC_DATA_XCORD_HIGH,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
-	if((HAL_I2C_Mem_Write(&hi2c, (DEVICE_ADRESS <<1) + 0,REGACC_DATA_XCORD_LOW, 1,&ACC_DATA_XCORD_LOW,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
+	if((HAL_I2C_Mem_Read(&hi2c1, (DEVICE_ADRESS <<1) + 0,REGACC_DATA_XCORD_HIGH, 1,&ACC_DATA_XCORD_HIGH,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
+	if((HAL_I2C_Mem_Read(&hi2c1, (DEVICE_ADRESS <<1) + 0,REGACC_DATA_XCORD_LOW, 1,&ACC_DATA_XCORD_LOW,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
 	int16_t xacc_value = (ACC_DATA_XCORD_HIGH << 8) |ACC_DATA_XCORD_LOW;
-	printf("XACC cord value = %d\r\n", xacc_value);
+	printf("XACC cord value = %f\r\n", (double)xacc_value/65.5); // You have to activate from : Project > Settings > C/C++ Build > Settings > MCU Settings turning the "-u_printf_float" section
 	uint8_t ACC_DATA_YCORD_HIGH;
 	uint8_t ACC_DATA_YCORD_LOW;
-	if((HAL_I2C_Mem_Write(&hi2c, (DEVICE_ADRESS <<1) + 0,REGACC_DATA_YCORD_HIGH, 1,&ACC_DATA_YCORD_HIGH,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
-	if((HAL_I2C_Mem_Write(&hi2c, (DEVICE_ADRESS <<1) + 0,REGACC_DATA_YCORD_LOW, 1,&ACC_DATA_YCORD_LOW,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
+	if((HAL_I2C_Mem_Read(&hi2c1, (DEVICE_ADRESS <<1) + 0,REGACC_DATA_YCORD_HIGH, 1,&ACC_DATA_YCORD_HIGH,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
+	if((HAL_I2C_Mem_Read(&hi2c1, (DEVICE_ADRESS <<1) + 0,REGACC_DATA_YCORD_LOW, 1,&ACC_DATA_YCORD_LOW,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
 	int16_t yacc_value = (ACC_DATA_YCORD_HIGH << 8) | ACC_DATA_YCORD_LOW;
-	printf("YACC cord value = %d\r\n", yacc_value);
+	printf("YACC cord value = %f\r\n", (double)yacc_value/65.5);
 	uint8_t ACC_DATA_ZCORD_HIGH;
 	uint8_t ACC_DATA_ZCORD_LOW;
-	if((HAL_I2C_Mem_Write(&hi2c, (DEVICE_ADRESS <<1) + 0,REGACC_DATA_ZCORD_HIGH, 1,&ACC_DATA_ZCORD_HIGH,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
-	if((HAL_I2C_Mem_Write(&hi2c, (DEVICE_ADRESS <<1) + 0,REGACC_DATA_ZCORD_LOW, 1,&ACC_DATA_ZCORD_LOW,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
+	if((HAL_I2C_Mem_Read(&hi2c1, (DEVICE_ADRESS <<1) + 0,REGACC_DATA_ZCORD_HIGH, 1,&ACC_DATA_ZCORD_HIGH,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
+	if((HAL_I2C_Mem_Read(&hi2c1, (DEVICE_ADRESS <<1) + 0,REGACC_DATA_ZCORD_LOW, 1,&ACC_DATA_ZCORD_LOW,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
 	int16_t zacc_value = (ACC_DATA_ZCORD_HIGH << 8) | ACC_DATA_ZCORD_LOW;
-	printf("ZACC cord value = %d\r\n", zacc_value);
+	printf("ZACC cord value = %f\r\n", (double)zacc_value/65.5);
     uint8_t GYRO_DATA_XCORD_HIGH;
 	uint8_t GYRO_DATA_XCORD_LOW;
-	if((HAL_I2C_Mem_Write(&hi2c, (DEVICE_ADRESS <<1) + 0,REGGYRO_DATA_XCORD_HIGH, 1,&GYRO_DATA_XCORD_HIGH,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
-	if((HAL_I2C_Mem_Write(&hi2c, (DEVICE_ADRESS <<1) + 0,REGGYRO_DATA_XCORD_LOW, 1,&GYRO_DATA_XCORD_LOW,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
+	if((HAL_I2C_Mem_Read(&hi2c1, (DEVICE_ADRESS <<1) + 0,REGGYRO_DATA_XCORD_HIGH, 1,&GYRO_DATA_XCORD_HIGH,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
+	if((HAL_I2C_Mem_Read(&hi2c1, (DEVICE_ADRESS <<1) + 0,REGGYRO_DATA_XCORD_LOW, 1,&GYRO_DATA_XCORD_LOW,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
 	int16_t xgyro_value = (GYRO_DATA_XCORD_HIGH<< 8) |  GYRO_DATA_XCORD_LOW;
-	printf("XGYRO cord value = %d\r\n", xgyro_value);
+	printf("XGYRO cord value = %f\r\n", (double)xgyro_value/65.5);
 	uint8_t GYRO_DATA_YCORD_HIGH;
 	uint8_t GYRO_DATA_YCORD_LOW;
-	if((HAL_I2C_Mem_Write(&hi2c, (DEVICE_ADRESS <<1) + 0,REGGYRO_DATA_YCORD_HIGH, 1,&GYRO_DATA_YCORD_HIGH,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
-	if((HAL_I2C_Mem_Write(&hi2c, (DEVICE_ADRESS <<1) + 0,REGGYRO_DATA_YCORD_LOW, 1,&GYRO_DATA_YCORD_LOW,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
+	if((HAL_I2C_Mem_Read(&hi2c1, (DEVICE_ADRESS <<1) + 0,REGGYRO_DATA_YCORD_HIGH, 1,&GYRO_DATA_YCORD_HIGH,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
+	if((HAL_I2C_Mem_Read(&hi2c1, (DEVICE_ADRESS <<1) + 0,REGGYRO_DATA_YCORD_LOW, 1,&GYRO_DATA_YCORD_LOW,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
 	int16_t ygyro_value = (GYRO_DATA_YCORD_HIGH << 8) | GYRO_DATA_YCORD_LOW;
-	printf("YGYRO cord value = %d\r\n", ygyro_value);
+	printf("YGYRO cord value = %f\r\n", (double)ygyro_value/65.5);
 	uint8_t GYRO_DATA_ZCORD_HIGH;
 	uint8_t GYRO_DATA_ZCORD_LOW;
-	if((HAL_I2C_Mem_Write(&hi2c, (DEVICE_ADRESS <<1) + 0,REGGYRO_DATA_ZCORD_HIGH, 1,&GYRO_DATA_ZCORD_HIGH,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
-	if((HAL_I2C_Mem_Write(&hi2c, (DEVICE_ADRESS <<1) + 0,REGGYRO_DATA_ZCORD_LOW, 1,data,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
-	int16_t zgyro_value = ( GYRO_DATA_ZCORD_HIGH << 8) | &GYRO_DATA_ZCORD_LOW;
-	printf("ZGYRO cord value = %d\r\n", zgyro_value);
+	if((HAL_I2C_Mem_Read(&hi2c1, (DEVICE_ADRESS <<1) + 0,REGGYRO_DATA_ZCORD_HIGH, 1,&GYRO_DATA_ZCORD_HIGH,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
+	if((HAL_I2C_Mem_Read(&hi2c1, (DEVICE_ADRESS <<1) + 0,REGGYRO_DATA_ZCORD_LOW, 1,GYRO_DATA_ZCORD_LOW,1,100)!= HAL_OK)) {printf("Error reading\r\n"); exit(1);};
+	int16_t zgyro_value = ( GYRO_DATA_ZCORD_HIGH << 8) | GYRO_DATA_ZCORD_LOW;
+	printf("ZGYRO cord value = %f\r\n", ((double)zgyro_value/65.5));
 }
